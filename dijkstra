@@ -1,0 +1,60 @@
+#include <iostream>
+#include <vector>
+#include <climits>
+#include <omp.h>
+using namespace std;
+
+#define INF INT_MAX
+#define V 6
+
+int minDistance(const vector<int>& dist, const vector<bool>& sptSet) {
+    int min = INF, min_index = -1;
+
+    for (int v = 0; v < V; v++)
+        if (!sptSet[v] && dist[v] <= min)
+            min = dist[v], min_index = v;
+
+    return min_index;
+}
+
+void dijkstra(int graph[V][V], int src) {
+    vector<int> dist(V, INF);
+    vector<bool> sptSet(V, false);
+
+    dist[src] = 0;
+
+    for (int count = 0; count < V - 1; count++) {
+        int u = minDistance(dist, sptSet);
+        sptSet[u] = true;
+
+        #pragma omp parallel for
+        for (int v = 0; v < V; v++) {
+            if (!sptSet[v] && graph[u][v] && dist[u] != INF &&
+                dist[u] + graph[u][v] < dist[v]) {
+                #pragma omp critical
+                {
+                    if (dist[u] + graph[u][v] < dist[v]) {
+                        dist[v] = dist[u] + graph[u][v];
+                    }
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < V; i++)
+        cout << "Distance from " << src << " to " << i << ": " << dist[i] << endl;
+}
+
+int main() {
+    int graph[V][V] = {
+        {0, 5, 0, 0, 0, 0},
+        {5, 0, 3, 0, 0, 0},
+        {0, 3, 0, 7, 0, 2},
+        {0, 0, 7, 0, 1, 0},
+        {0, 0, 0, 1, 0, 6},
+        {0, 0, 2, 0, 6, 0}
+    };
+
+    dijkstra(graph, 0);
+    return 0;
+}
