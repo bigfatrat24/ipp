@@ -1,0 +1,88 @@
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <ctime>
+#include <omp.h>
+
+using namespace std;
+
+// Function for distributed histogram sort
+void distributedHistogramSort(vector<int>& data, int maxValue) {
+    int n = data.size();
+    int numThreads = 1;
+
+    // Get number of threads (once)
+    #pragma omp parallel
+    {
+        #pragma omp single
+        numThreads = omp_get_num_threads();
+    }
+
+    // Create a local histogram for each thread
+    vector< vector<int> > localHist(numThreads, vector<int>(maxValue + 1, 0));
+
+    // Each thread fills its own histogram
+    #pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        int chunkSize = (n + numThreads - 1) / numThreads;  // ceiling division
+        int start = tid * chunkSize;
+        int end = start + chunkSize;
+        if (end > n) end = n;
+
+        for (int i = start; i < end; ++i) {
+            int val = data[i];
+            if (val >= 0 && val <= maxValue) {
+                localHist[tid][val]++;
+            }
+        }
+    }
+
+    // Merge all local histograms into one global histogram
+    vector<int> globalHist(maxValue + 1, 0);
+    for (int t = 0; t < numThreads; ++t) {
+        for (int i = 0; i <= maxValue; ++i) {
+            globalHist[i] += localHist[t][i];
+        }
+    }
+
+    // Rebuild the sorted array using the global histogram
+    int index = 0;
+    for (int i = 0; i <= maxValue; ++i) {
+        while (globalHist[i] > 0) {
+            data[index++] = i;
+            globalHist[i]--;
+        }
+    }
+}
+
+int main() {
+    int n, maxValue;
+
+    cout << "Enter the number of elements: ";
+    cin >> n;
+
+    cout << "Enter the maximum value of elements (e.g., 100): ";
+    cin >> maxValue;
+
+    vector<int> data(n);
+
+    cout << "Enter the " << n << " elements (each between 0 and " << maxValue << "):\n";
+    for (int i = 0; i < n; ++i) {
+        cin >> data[i];
+    }
+
+    cout << "\nOriginal Array:\n";
+    for (int i = 0; i < n; ++i)
+        cout << data[i] << " ";
+    cout << "\n";
+
+    distributedHistogramSort(data, maxValue);
+
+    cout << "\nSorted Array:\n";
+    for (int i = 0; i < n; ++i)
+        cout << data[i] << " ";
+    cout << "\n";
+
+    return 0;
+}
