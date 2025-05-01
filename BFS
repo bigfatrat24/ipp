@@ -1,0 +1,59 @@
+#include <iostream>
+#include <vector>
+#include <omp.h>
+
+struct Graph {
+    int numVertices;
+    std::vector<std::vector<int> > adjacencyList;
+};
+
+void parallelBFS(const Graph& graph, int startVertex) {
+    std::vector<bool> visited(graph.numVertices, false);
+    std::vector<int> currentFrontier;
+    visited[startVertex] = true;
+    currentFrontier.push_back(startVertex);
+
+    while (!currentFrontier.empty()) {
+        std::vector<int> nextFrontier;
+
+        // Process all nodes in the current frontier in parallel
+        #pragma omp parallel for
+        for (int i = 0; i < currentFrontier.size(); ++i) {
+            int current = currentFrontier[i];
+            std::cout << current << " ";
+
+            // Check neighbors
+            for (int neighbor : graph.adjacencyList[current]) {
+                // Use a critical section to safely update visited and nextFrontier
+                #pragma omp critical
+                {
+                    if (!visited[neighbor]) {
+                        visited[neighbor] = true;
+                        nextFrontier.push_back(neighbor);
+                    }
+                }
+            }
+        }
+
+        currentFrontier = nextFrontier;
+    }
+}
+
+int main() {
+    Graph graph;
+    graph.numVertices = 6;
+    graph.adjacencyList.resize(graph.numVertices);
+
+    graph.adjacencyList[0] = {1, 2};
+    graph.adjacencyList[1] = {0, 2, 3, 4};
+    graph.adjacencyList[2] = {0, 1, 4};
+    graph.adjacencyList[3] = {1, 4, 5};
+    graph.adjacencyList[4] = {1, 2, 3, 5};
+    graph.adjacencyList[5] = {3, 4};
+
+    std::cout << "Parallel BFS starting from vertex 0:\n";
+    parallelBFS(graph, 0);
+    std::cout << std::endl;
+
+    return 0;
+}
