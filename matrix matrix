@@ -1,0 +1,47 @@
+#include <iostream>
+#include <vector>
+#include <omp.h>
+
+int main() {
+    int n;
+
+    std::cout << "Enter the size of the matrices (n x n): ";
+    std::cin >> n;
+
+    // Declare matrices A, B, and C
+    std::vector<std::vector<int> > A(n, std::vector<int>(n));
+    std::vector<std::vector<int> > B(n, std::vector<int>(n));
+    std::vector<std::vector<int> > C(n, std::vector<int>(n, 0)); // Initialize C to 0
+
+    // Input matrix A
+    std::cout << "Enter elements of matrix A:\n";
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j)
+            std::cin >> A[i][j];
+
+    // Input matrix B
+    std::cout << "Enter elements of matrix B:\n";
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j)
+            std::cin >> B[i][j];
+
+    // Perform parallel matrix multiplication
+    #pragma omp parallel for
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            for (int k = 0; k < n; ++k) {
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+
+    // Output the result matrix C
+    std::cout << "Result matrix C = A x B:\n";
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j)
+            std::cout << C[i][j] << " ";
+        std::cout << "\n";
+    }
+
+    return 0;
+}
